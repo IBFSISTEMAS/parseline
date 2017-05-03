@@ -17,11 +17,21 @@ module ParseLine::FixedWidth
       parse_field(field,range,block)
     end
 
+    def test_encoding(line)
+      /./ !~ line
+    rescue ArgumentError => e
+      if e.message == "invalid byte sequence in UTF-8"
+        line.force_encoding(Encoding::ISO_8859_1) if line.encoding == Encoding::UTF_8
+        line.encode!(Encoding::UTF_8)
+      end
+    end
+
     def load_lines(filepath, options={})
       case options[:except].class.to_s
       when "Array"
         lines=[]
         File.open(filepath).each_with_index do |line, i|
+          test_encoding(line)
           if options[:length] == nil
             lines << load_line(line) unless options[:except].include?(i+1)
           else
@@ -32,6 +42,7 @@ module ParseLine::FixedWidth
       when "Regexp"
         lines=[]
         File.open(filepath).each do |line|
+          test_encoding(line)
           if options[:length] == nil
             lines << load_line(line) if options[:except] !~ line
           else
